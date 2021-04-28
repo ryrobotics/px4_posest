@@ -45,7 +45,7 @@ void printf_info();
 void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     // Read the Drone Position from the Vrpn [Frame: Nokov] (Nokov->ENU Frame)
-    Eigen::Vector3d pos_drone_mocap_enu(-msg->pose.position.x, msg->pose.position.z, msg->pose.position.y);
+    Eigen::Vector3d pos_drone_mocap_enu(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
 
     pos_drone_mocap = pos_drone_mocap_enu;
     // Read the Drone Quaternion from the Vrpn, Nokov is Z-up [Frame: Nokov(ENU)]
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
 
     // Subscribe optitrack estimated position
-    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/A380/pose", 1000, optitrack_cb);
+    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/Amov01/pose", 1000, optitrack_cb);
 
     // Subscribe Drone's Position for Reference [Frame: ENU]
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, pos_cb);
@@ -115,9 +115,9 @@ int main(int argc, char **argv)
         // CallBack for Updating Sensor State
         ros::spinOnce();
 
-        vision.pose.position.x = pos_drone_mocap[0];
-        vision.pose.position.y = pos_drone_mocap[1];
-        vision.pose.position.z = pos_drone_mocap[2];
+        vision.pose.position.x = pos_drone_mocap[0] / 1e3;
+        vision.pose.position.y = pos_drone_mocap[1] / 1e3;
+        vision.pose.position.z = pos_drone_mocap[2] / 1e3;
 
         vision.pose.orientation.x = q_mocap.x();
         vision.pose.orientation.y = q_mocap.y();
@@ -153,7 +153,7 @@ void printf_info()
     // fixed point
     cout.setf(ios::fixed);
     // set precision
-    cout<<setprecision(2);
+    cout<<setprecision(4);
     // left align
     cout.setf(ios::left);
     // show point
@@ -162,11 +162,11 @@ void printf_info()
     cout.setf(ios::showpos);
 
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>Nokov Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Pos_Nokov [X Y Z] : " << pos_drone_mocap[0] << " [ m ] "<< pos_drone_mocap[1] <<" [ m ] "<< pos_drone_mocap[2] <<" [ m ] "<<endl;
+    cout << "Pos_Nokov [X Y Z] : " << pos_drone_mocap[0] << " [ mm ] "<< pos_drone_mocap[1] <<" [ mm ] "<< pos_drone_mocap[2] <<" [ mm ] "<<endl;
     cout << "Euler_Nokov [Yaw] : " << Euler_mocap[2] * 180/M_PI<<" [deg]  "<<endl;
         
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>FCU Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1] <<" [ m ] "<< pos_drone_fcu[2] <<" [ m ] "<<endl;
+    cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0]*1e3 << " [ mm ] "<< pos_drone_fcu[1]*1e3 <<" [ mm ] "<< pos_drone_fcu[2]*1e3 <<" [ mm ] "<<endl;
     cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1] <<" [m/s] "<< vel_drone_fcu[2] <<" [m/s] "<<endl;
     cout << "Euler_fcu [Yaw] : " << Euler_fcu[2] * 180/M_PI<<" [deg] "<<endl;   
 }
