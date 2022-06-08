@@ -2,6 +2,7 @@
 
 name: vicon
 root: ~/
+pre_window: source /src/catkin_ws/devel/setup.bash
 
 # Optional tmux socket
 # socket_name: foo
@@ -32,7 +33,9 @@ root: ~/
 
 windows:
   - vrpn:
-        layout: main-vertical
+        layout: tiled
         panes:
           - roslaunch vrpn_client_ros sample.launch server:=192.168.10.1
           - rosrun mavros mavros_node _fcu_url:=/dev/ttyTHS1:921600
+          - rosrun px4_mocap px4_mocap_node
+          - cd /src/catkin_ws/src/px4_mocap/src/

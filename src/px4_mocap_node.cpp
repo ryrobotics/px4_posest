@@ -27,9 +27,9 @@
 
 using namespace std;
 // Data from MoCap
-Eigen::Vector3d pos_drone_mocap;    //current position Nokov
-Eigen::Quaterniond q_mocap;         //current quaternion Nokov
-Eigen::Vector3d Euler_mocap;        //current attitude Nokov
+Eigen::Vector3d pos_drone_mocap;    //current position mocap
+Eigen::Quaterniond q_mocap;         //current quaternion mocap
+Eigen::Vector3d Euler_mocap;        //current attitude mocap
 // Pos and Vel of Drone
 Eigen::Vector3d pos_drone_fcu;      //current position FCU
 Eigen::Vector3d vel_drone_fcu;      //current velocity FCU
@@ -44,11 +44,11 @@ void printf_info();
 // CallBack Func
 void optitrack_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-    // Read the Drone Position from the Vrpn [Frame: Nokov] (Nokov->ENU Frame)
+    // Read the Drone Position from the Vrpn [Frame: mocap] (mocap->ENU Frame)
     Eigen::Vector3d pos_drone_mocap_enu(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
 
     pos_drone_mocap = pos_drone_mocap_enu;
-    // Read the Drone Quaternion from the Vrpn, Nokov is Z-up [Frame: Nokov(ENU)]
+    // Read the Drone Quaternion from the Vrpn, mocap is Z-up [Frame: mocap(ENU)]
     Eigen::Quaterniond q_mocap_enu(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
     q_mocap = q_mocap_enu;
 
@@ -86,11 +86,11 @@ void euler_cb(const sensor_msgs::Imu::ConstPtr& msg)
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "px4_nokov");
+    ros::init(argc, argv, "px4_mocap");
     ros::NodeHandle nh("~");
 
     // Subscribe optitrack estimated position
-    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/Amov01/pose", 1000, optitrack_cb);
+    ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/rywang/pose", 1000, optitrack_cb);
 
     // Subscribe Drone's Position for Reference [Frame: ENU]
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, pos_cb);
@@ -161,9 +161,9 @@ void printf_info()
     // show pos
     cout.setf(ios::showpos);
 
-    cout <<">>>>>>>>>>>>>>>>>>>>>>>>Nokov Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Pos_Nokov [X Y Z] : " << pos_drone_mocap[0] << " [ mm ] "<< pos_drone_mocap[1] <<" [ mm ] "<< pos_drone_mocap[2] <<" [ mm ] "<<endl;
-    cout << "Euler_Nokov [Yaw] : " << Euler_mocap[2] * 180/M_PI<<" [deg]  "<<endl;
+    cout <<">>>>>>>>>>>>>>>>>>>>>>>>mocap Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
+    cout << "Pos_mocap [X Y Z] : " << pos_drone_mocap[0] << " [ mm ] "<< pos_drone_mocap[1] <<" [ mm ] "<< pos_drone_mocap[2] <<" [ mm ] "<<endl;
+    cout << "Euler_mocap [Yaw] : " << Euler_mocap[2] * 180/M_PI<<" [deg]  "<<endl;
         
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>FCU Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
     cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0]*1e3 << " [ mm ] "<< pos_drone_fcu[1]*1e3 <<" [ mm ] "<< pos_drone_fcu[2]*1e3 <<" [ mm ] "<<endl;
