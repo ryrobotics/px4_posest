@@ -1,5 +1,5 @@
-# PX4_Nokov
-Nokov Opti Track System Test Code for Pixhawk with PX4
+# PX4_MoCap
+Vicon or Nokov Opti Track System Test Code for Pixhawk with PX4
 
 ```shell
 roscore
