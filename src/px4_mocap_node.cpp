@@ -115,9 +115,9 @@ int main(int argc, char **argv)
         // CallBack for Updating Sensor State
         ros::spinOnce();
 
-        vision.pose.position.x = pos_drone_mocap[0] / 1e3;
-        vision.pose.position.y = pos_drone_mocap[1] / 1e3;
-        vision.pose.position.z = pos_drone_mocap[2] / 1e3;
+        vision.pose.position.x = pos_drone_mocap[0];
+        vision.pose.position.y = pos_drone_mocap[1];
+        vision.pose.position.z = pos_drone_mocap[2];
 
         vision.pose.orientation.x = q_mocap.x();
         vision.pose.orientation.y = q_mocap.y();
@@ -162,11 +162,11 @@ void printf_info()
     cout.setf(ios::showpos);
 
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>mocap Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Pos_mocap [X Y Z] : " << pos_drone_mocap[0] << " [ mm ] "<< pos_drone_mocap[1] <<" [ mm ] "<< pos_drone_mocap[2] <<" [ mm ] "<<endl;
+    cout << "Pos_mocap [X Y Z] : " << pos_drone_mocap[0] << " [ m ] "<< pos_drone_mocap[1] <<" [ m ] "<< pos_drone_mocap[2] <<" [ m ] "<<endl;
     cout << "Euler_mocap [Yaw] : " << Euler_mocap[2] * 180/M_PI<<" [deg]  "<<endl;
         
     cout <<">>>>>>>>>>>>>>>>>>>>>>>>FCU Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<<<<<<" <<endl;
-    cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0]*1e3 << " [ mm ] "<< pos_drone_fcu[1]*1e3 <<" [ mm ] "<< pos_drone_fcu[2]*1e3 <<" [ mm ] "<<endl;
+    cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] "<< pos_drone_fcu[1] <<" [ m ] "<< pos_drone_fcu[2] <<" [ m ] "<<endl;
     cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] "<< vel_drone_fcu[1] <<" [m/s] "<< vel_drone_fcu[2] <<" [m/s] "<<endl;
     cout << "Euler_fcu [Yaw] : " << Euler_fcu[2] * 180/M_PI<<" [deg] "<<endl;   
 }

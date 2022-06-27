@@ -35,7 +35,7 @@ windows:
   - vrpn:
         layout: tiled
         panes:
-          - roslaunch vrpn_client_ros sample.launch server:=192.168.10.1
-          - rosrun mavros mavros_node _fcu_url:=/dev/ttyTHS1:921600
+          - roslaunch vrpn_client_ros sample.launch server:=192.168.50.169
+          - roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
           - rosrun px4_mocap px4_mocap_node
           - cd /src/catkin_ws/src/px4_mocap/src/
