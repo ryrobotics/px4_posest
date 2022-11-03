@@ -158,6 +158,10 @@ target_link_libraries(offb_node  ${catkin_LIBRARIES})
 add_executable(square_node src/square_node.cpp)
 add_dependencies(px4_mocap_node square_node)
 target_link_libraries(square_node  ${catkin_LIBRARIES})
+
+add_executable(px4_t265 src/px4_t265.cpp)
+add_dependencies(px4_mocap_node px4_t265)
+target_link_libraries(px4_t265  ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############

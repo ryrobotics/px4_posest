@@ -1,0 +1,13 @@
+<launch>
+
+<arg name="flag_vicon_t265" default="0"/>
+
+<group if="$(arg flag_vicon_t265)">
+	<node pkg="px4_mocap" type="px4_t265" name="px4_t265" output="screen"/>
+</group>
+
+<group unless="$(arg flag_vicon_t265)">
+	<node pkg="px4_mocap" type="px4_mocap_node" name="px4_mocap_node" output="screen"/>
+</group>
+
+</launch>
