@@ -162,6 +162,10 @@ target_link_libraries(square_node  ${catkin_LIBRARIES})
 add_executable(px4_t265 src/px4_t265.cpp)
 add_dependencies(px4_mocap_node px4_t265)
 target_link_libraries(px4_t265  ${catkin_LIBRARIES})
+
+add_executable(px4_os0 src/px4_os0.cpp)
+add_dependencies(px4_mocap_node px4_os0)
+target_link_libraries(px4_os0  ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############
