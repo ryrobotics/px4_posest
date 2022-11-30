@@ -1,13 +1,9 @@
 <launch>
+	<!-- 0->Vicon 1->Lidar 2->t265 -->
+	<arg name="type"	default="0"/>
 
-<arg name="flag_vicon_t265" default="0"/>
-
-<group if="$(arg flag_vicon_t265)">
-	<node pkg="px4_mocap" type="px4_t265" name="px4_t265" output="screen"/>
-</group>
-
-<group unless="$(arg flag_vicon_t265)">
-	<node pkg="px4_mocap" type="px4_mocap_node" name="px4_mocap_node" output="screen"/>
-</group>
+	<node pkg="px4_posest" type="px4_mix" name="px4_mix" output="screen">
+    	<param name="sensor_type" value="$(arg type)"/>
+	</node>
 
 </launch>

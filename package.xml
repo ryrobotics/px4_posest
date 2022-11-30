@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>px4_mocap</name>
+  <name>px4_posest</name>
   <version>0.0.0</version>
-  <description>The px4_mocap package</description>
+  <description>The px4 pose estimation publisher package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="ray@todo.todo">ray</maintainer>
+  <maintainer email="wry0117@outlook.com">Ryan</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
