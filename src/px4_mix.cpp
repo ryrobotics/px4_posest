@@ -46,6 +46,11 @@ Vector3d pos_drone_os0;
 Quaterniond q_os0;
 Vector3d Euler_os0;
 
+// Data from imu_ekf
+Vector3d pos_drone_ekf;
+Quaterniond q_ekf;
+Vector3d Euler_ekf;
+
 // Pos and Vel of Drone
 Vector3d pos_drone_fcu; // current position FCU
 Vector3d vel_drone_fcu; // current velocity FCU
@@ -104,6 +109,20 @@ void lio_cb(const nav_msgs::Odometry::ConstPtr &msg)
     Euler_os0 = mavros::ftf::quaternion_to_rpy(q_os0);
 }
 
+void ekf_cb(const nav_msgs::Odometry::ConstPtr &msg)
+{
+    // Read the Drone Position from the 3D Lidar + imu_ekf [Frame: ENU] (imu_ekf->ENU Frame)
+    Vector3d pos_drone_ekf_enu(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
+
+    pos_drone_ekf = pos_drone_ekf_enu;
+    // Read the Drone Quaternion from the 3D Lidar + imu_ekf, imu_ekf is Z-up [Frame: ENU]
+    Quaterniond q_ekf_enu(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
+    q_ekf = q_ekf_enu;
+
+    // Tranfer the Quaternion to Euler Angles
+    Euler_ekf = mavros::ftf::quaternion_to_rpy(q_ekf);
+}
+
 void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
 {
     // Read the Drone Position from the Mavros Package [Frame: ENU]
@@ -136,7 +155,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "px4_mix_monitor");
     ros::NodeHandle nh("~");
 
-    nh.param<int>("sensor_type", sensor_type, 0); // 0->vicon, 1->lidar, 2->vio
+    nh.param<int>("sensor_type", sensor_type, 0); // 0->vicon, 1->vio, 2->lidar, 3->imu_lidar_ekf
 
     // Subscribe optitrack estimated position
     ros::Subscriber optitrack_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/rywang/pose", 1000, optitrack_cb);
@@ -146,6 +165,9 @@ int main(int argc, char **argv)
 
     // Subscribe os0 odom
     ros::Subscriber lio_sub = nh.subscribe<nav_msgs::Odometry>("/Odometry", 10, lio_cb);
+
+    // Subscribe imu_ekf odom
+    ros::Subscriber ekf_sub = nh.subscribe<nav_msgs::Odometry>("/imu_ekf/odom", 10, ekf_cb);
 
     // Subscribe Drone's Position for Reference [Frame: ENU]
     ros::Subscriber position_sub = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, pos_cb);
@@ -160,7 +182,7 @@ int main(int argc, char **argv)
     // Send to FCU using mavros_extras/src/plugins/vision_pose_estimate.cpp, Mavlink Msg is VISION_POSITION_ESTIMATE
     // uORB msg in FCU is vehicle_vision_position.msg and vehicle_vision_attitude.msg
     ros::Publisher vision_pub;
-    if (sensor_type != 2) // if using t265, no need publish pose
+    if (sensor_type != 1) // if using t265, no need publish pose
     {
         vision_pub = nh.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 100);
     }
@@ -174,7 +196,7 @@ int main(int argc, char **argv)
         // CallBack for Updating Sensor State
         ros::spinOnce();
 
-        if (sensor_type == 0)
+        if (sensor_type == 0) // vicon
         {
             vision.pose.position.x = pos_drone_mocap[0];
             vision.pose.position.y = pos_drone_mocap[1];
@@ -188,7 +210,7 @@ int main(int argc, char **argv)
             vision.header.stamp = ros::Time::now();
             vision_pub.publish(vision);
         }
-        else if (sensor_type == 1)
+        else if (sensor_type == 2) // lidar
         {
             vision.pose.position.x = pos_drone_os0[0];
             vision.pose.position.y = pos_drone_os0[1];
@@ -198,6 +220,21 @@ int main(int argc, char **argv)
             vision.pose.orientation.y = q_os0.y();
             vision.pose.orientation.z = q_os0.z();
             vision.pose.orientation.w = q_os0.w();
+
+            vision.header.stamp = ros::Time::now();
+            vision_pub.publish(vision);
+        }
+
+        else if (sensor_type == 3) // lidar_imu_ekf
+        {
+            vision.pose.position.x = pos_drone_ekf[0];
+            vision.pose.position.y = pos_drone_ekf[1];
+            vision.pose.position.z = pos_drone_ekf[2];
+
+            vision.pose.orientation.x = q_ekf.x();
+            vision.pose.orientation.y = q_ekf.y();
+            vision.pose.orientation.z = q_ekf.z();
+            vision.pose.orientation.w = q_ekf.w();
 
             vision.header.stamp = ros::Time::now();
             vision_pub.publish(vision);
@@ -228,9 +265,11 @@ void printf_info()
     if (sensor_type == 0)
         cout << ">>>>>>>>>>>>>>>>>>>>Pos Data from Vicon<<<<<<<<<<<<<<<<<<<<<<<" << endl;
     else if (sensor_type == 1)
-        cout << ">>>>>>>>>>>>>>>>>>>>Pos Data from Lidar<<<<<<<<<<<<<<<<<<<<<<<" << endl;
-    else if (sensor_type == 2)
         cout << ">>>>>>>>>>>>>>>>>>>>Pos Data from T265<<<<<<<<<<<<<<<<<<<<<<<<" << endl;
+    else if (sensor_type == 2)
+        cout << ">>>>>>>>>>>>>>>>>>>>Pos Data from Lidar<<<<<<<<<<<<<<<<<<<<<<<" << endl;
+    else if (sensor_type == 3)
+        cout << ">>>>>>>>>>>>>>>>>>>>Pos Data from imu_ekf<<<<<<<<<<<<<<<<<<<<<" << endl;
 
     // fixed point
     cout.setf(ios::fixed);
@@ -247,13 +286,23 @@ void printf_info()
     cout << "Pos_mocap [X Y Z] : " << pos_drone_mocap[0] << " [ m ] " << pos_drone_mocap[1] << " [ m ] " << pos_drone_mocap[2] << " [ m ] " << endl;
     cout << "Euler_mocap [Yaw] : " << Euler_mocap[2] * 180 / M_PI << " [deg]  " << endl;
 
-    cout << ">>>>>>>>>>>>>>>>>>>>T265 Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<" << endl;
-    cout << "Pos_t265 [X Y Z] : " << pos_drone_t265[0] << " [ m ] " << pos_drone_t265[1] << " [ m ] " << pos_drone_t265[2] << " [ m ] " << endl;
-    cout << "Euler_t265 [Yaw] : " << Euler_t265[2] * 180 / M_PI << " [deg]  " << endl;
+    if (sensor_type == 1)
+    {
+        cout << ">>>>>>>>>>>>>>>>>>>>T265 Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<" << endl;
+        cout << "Pos_t265 [X Y Z] : " << pos_drone_t265[0] << " [ m ] " << pos_drone_t265[1] << " [ m ] " << pos_drone_t265[2] << " [ m ] " << endl;
+        cout << "Euler_t265 [Yaw] : " << Euler_t265[2] * 180 / M_PI << " [deg]  " << endl;        
+    }
+    else
+    {
+        cout << ">>>>>>>>>>>>>>>>>>>>FAST_LIO Info [ENU Frame]<<<<<<<<<<<<<<<<<<" << endl;
+        cout << "Pos_os0 [X Y Z] : " << pos_drone_os0[0] << " [ m ] " << pos_drone_os0[1] << " [ m ] " << pos_drone_os0[2] << " [ m ] " << endl;
+        cout << "Euler_os0 [Yaw] : " << Euler_os0[2] * 180 / M_PI << " [deg]  " << endl;
 
-    cout << ">>>>>>>>>>>>>>>>>>>>OS0 Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<" << endl;
-    cout << "Pos_os0 [X Y Z] : " << pos_drone_os0[0] << " [ m ] " << pos_drone_os0[1] << " [ m ] " << pos_drone_os0[2] << " [ m ] " << endl;
-    cout << "Euler_os0 [Yaw] : " << Euler_os0[2] * 180 / M_PI << " [deg]  " << endl;
+        cout << ">>>>>>>>>>>>>>>>>>>>imu_ekf Info [ENU Frame]<<<<<<<<<<<<<<<<<<<" << endl;
+        cout << "Pos_ekf [X Y Z] : " << pos_drone_ekf[0] << " [ m ] " << pos_drone_ekf[1] << " [ m ] " << pos_drone_ekf[2] << " [ m ] " << endl;
+        cout << "Euler_ekf [Yaw] : " << Euler_ekf[2] * 180 / M_PI << " [deg]  " << endl;
+    }
+
 
     cout << ">>>>>>>>>>>>>>>>>>>>FCU Info [ENU Frame]<<<<<<<<<<<<<<<<<<<<<<" << endl;
     cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] " << pos_drone_fcu[1] << " [ m ] " << pos_drone_fcu[2] << " [ m ] " << endl;

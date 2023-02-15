@@ -1,6 +1,6 @@
 <launch>
-	<!-- 0->Vicon 1->Lidar 2->t265 -->
-	<arg name="type"	default="0"/>
+	<!-- 0->Vicon 1->T265 2->Lidar 3->imu_ekf -->
+	<arg name="type" default="0"/>
 
 	<node pkg="px4_posest" type="px4_mix" name="px4_mix" output="screen">
     	<param name="sensor_type" value="$(arg type)"/>
