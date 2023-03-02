@@ -7,31 +7,31 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
     if(sensor_type == SENSOR_TYPE::MOCAP)
     {
         // Subscribe mocap estimated position
-        mocap_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/rywang/pose", 1000, &PX4_posest::mocap_cb, this);
+        mocap_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/rywang/pose", 1, &PX4_posest::mocap_cb, this);
     }
     else if(sensor_type == SENSOR_TYPE::VIO)
     {
         // Subscribe t265 odom
-        vio_sub = nh.subscribe<nav_msgs::Odometry>("camera/odom/sample_throttled", 10, &PX4_posest::vio_cb, this);
+        vio_sub = nh.subscribe<nav_msgs::Odometry>("camera/odom/sample_throttled", 1, &PX4_posest::vio_cb, this);
     }
     else if(sensor_type == SENSOR_TYPE::LIO)
     {
         // Subscribe os0 odom
-        lio_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 10, &PX4_posest::lio_cb, this);        
+        lio_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 1, &PX4_posest::lio_cb, this);        
     }
     else if(sensor_type == SENSOR_TYPE::EKF)
     {
         // Subscribe os0 odom
-        lio_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 10, &PX4_posest::lio_cb, this);        
+        lio_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 1, &PX4_posest::lio_cb, this);        
         // Subscribe imu_ekf odom
-        ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 10, &PX4_posest::ekf_cb, this);        
+        ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 1, &PX4_posest::ekf_cb, this);        
     }
 
     // Subscribe Drone's Position for Reference [Frame: ENU]
-    position_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10, &PX4_posest::pos_cb, this);
+    position_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 1, &PX4_posest::pos_cb, this);
 
     // Subscribe Drone's Velocity for Reference [Frame: ENU]
-    velocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("mavros/local_position/velocity_local", 10, &PX4_posest::vel_cb, this);
+    velocity_sub = nh.subscribe<geometry_msgs::TwistStamped>("mavros/local_position/velocity_local", 1, &PX4_posest::vel_cb, this);
 
     // Subscribe Drone's Euler for Reference [Frame: ENU]
     attitude_sub = nh.subscribe<sensor_msgs::Imu>("mavros/imu/data", 10, &PX4_posest::att_cb, this);
