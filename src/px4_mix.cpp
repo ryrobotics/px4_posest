@@ -25,6 +25,8 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <sensor_msgs/Range.h>
 #include <geometry_msgs/PoseWithCovariance.h>
+#include <sensor_msgs/BatteryState.h>
+#include <sensor_msgs/Range.h>
 
 using namespace std;
 using namespace Eigen;
@@ -150,6 +152,20 @@ void euler_cb(const sensor_msgs::Imu::ConstPtr &msg)
     Euler_fcu = mavros::ftf::quaternion_to_rpy(q_fcu);
 }
 
+double voltage;
+void batt_cb(const sensor_msgs::BatteryState::ConstPtr &msg)
+{
+    voltage = msg->voltage;
+}
+
+// If use this module, pls comment the '- distance_sensor' line, which is in the default plugin_blacklist
+// The file location is /opt/ros/melodic/share/mavros/launch/px4_pluginlists.yaml
+double range;
+void rng_cb(const sensor_msgs::Range::ConstPtr &msg)
+{
+    range = msg->range;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "px4_mix_monitor");
@@ -177,6 +193,10 @@ int main(int argc, char **argv)
 
     // Subscribe Drone's Euler for Reference [Frame: ENU]
     ros::Subscriber euler_sub = nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 10, euler_cb);
+
+    ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState>("/mavros/battery", 10, batt_cb);    
+    
+    ros::Subscriber rng_sub = nh.subscribe<sensor_msgs::Range>("/mavros/distance_sensor/hrlv_ez4_pub", 10, rng_cb);
 
     // Publish Drone's pose [Frame: ENU]
     // Send to FCU using mavros_extras/src/plugins/vision_pose_estimate.cpp, Mavlink Msg is VISION_POSITION_ESTIMATE
@@ -308,4 +328,6 @@ void printf_info()
     cout << "Pos_fcu [X Y Z] : " << pos_drone_fcu[0] << " [ m ] " << pos_drone_fcu[1] << " [ m ] " << pos_drone_fcu[2] << " [ m ] " << endl;
     cout << "Vel_fcu [X Y Z] : " << vel_drone_fcu[0] << " [m/s] " << vel_drone_fcu[1] << " [m/s] " << vel_drone_fcu[2] << " [m/s] " << endl;
     cout << "Euler_fcu [Yaw] : " << Euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
+    cout << "Batt : " << voltage << " [V] " << endl;
+    cout << "UP_Dist : " << range << " [m] " << endl;
 }
