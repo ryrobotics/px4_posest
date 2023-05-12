@@ -38,7 +38,7 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
 
     batt_sub = nh.subscribe<sensor_msgs::BatteryState>("mavros/battery", 10, &PX4_posest::batt_cb, this);    
     
-    rng_sub = nh.subscribe<sensor_msgs::Range>("mavros/distance_sensor/hrlv_ez4_pub", 10, &PX4_posest::rng_cb, this);
+    // rng_sub = nh.subscribe<sensor_msgs::Range>("mavros/distance_sensor/hrlv_ez4_pub", 10, &PX4_posest::rng_cb, this);
 
     // Publish Drone's pose [Frame: ENU]
     // Send to FCU using mavros_extras/src/plugins/vision_pose_estimate.cpp, Mavlink Msg is VISION_POSITION_ESTIMATE
@@ -205,10 +205,10 @@ void PX4_posest::batt_cb(const sensor_msgs::BatteryState::ConstPtr &msg)
 
 // If use this module, pls comment the '- distance_sensor' line, which is in the default plugin_blacklist
 // The file location is /opt/ros/melodic/share/mavros/launch/px4_pluginlists.yaml
-void PX4_posest::rng_cb(const sensor_msgs::Range::ConstPtr &msg)
-{
-    range = msg->range;
-}
+// void PX4_posest::rng_cb(const sensor_msgs::Range::ConstPtr &msg)
+// {
+//     range = msg->range;
+// }
 
 
 float PX4_posest::get_dt(ros::Time last)
@@ -275,5 +275,6 @@ void PX4_posest::printf_info()
     // cout << "Vel_fcu: " << px4_vel[0] << " [m/s] " << px4_vel[1] << " [m/s] " << px4_vel[2] << " [m/s] " << endl;
     cout << "Euler_px4 [Yaw] : " << euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
     cout << "Batt : " << voltage << " [V] " << percentage * 100 << "%" << endl;
-    cout << "UP_Dist : " << range << " [m] " << "Camera: "<< camera_cnt << " [" << camera_flag << "]"<< endl;
+    cout << "Camera: " << camera_cnt << " [" << camera_flag << "]" << endl;
+    // cout << "UP_Dist : " << range << " [m] " << "Camera: "<< camera_cnt << " [" << camera_flag << "]"<< endl;
 }
