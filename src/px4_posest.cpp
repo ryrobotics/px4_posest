@@ -50,6 +50,7 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
         timer_vision_pub = nh.createTimer(ros::Duration(0.02), &PX4_posest::timercb_pub_vision_pose, this);
     }
 
+    timer_take_photo = nh.createTimer(ros::Duration(2), &PX4_posest::timercb_take_photo, this);
 }
 
 // CallBack Func
@@ -71,6 +72,42 @@ void PX4_posest::timercb_pub_vision_pose(const ros::TimerEvent &e)
 
     vision_pose.header.stamp = ros::Time::now();
     vision_pub.publish(vision_pose);
+}
+
+void PX4_posest::camera_initial()
+{
+    ser.setPort("/dev/ttyTHS0");
+    ser.setBaudrate(115200);
+    serial::Timeout to = serial::Timeout::simpleTimeout(200);
+    ser.setTimeout(to);
+    ser.open();
+    ser.flushInput();
+    ser.flushOutput();
+    camera_flag = false;
+    camera_cnt = 0;
+}
+
+void PX4_posest::timercb_take_photo(const ros::TimerEvent &e)
+{
+    // Send the command bytes
+    std::vector<uint8_t> command_bytes = {0xaa, 0x05, 0x01, 0x04, 0x0a};
+    ser.write(command_bytes);
+
+    // Wait for and read the response bytes
+    std::vector<uint8_t> response_bytes;
+    response_bytes.resize(6);
+    ser.read(response_bytes.data(), 6);
+
+    // Check if the response bytes match the expected bytes
+    std::vector<uint8_t> expected_response_bytes = {0x55, 0x06, 0x01, 0x00, 0x04, 0xe2};
+
+    if (response_bytes == expected_response_bytes)
+    {
+        camera_flag = true;
+        camera_cnt++;
+    }
+    else 
+        camera_flag = false;
 }
 
 void PX4_posest::mocap_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -210,5 +247,5 @@ void PX4_posest::printf_info()
     // cout << "Vel_fcu: " << px4_vel[0] << " [m/s] " << px4_vel[1] << " [m/s] " << px4_vel[2] << " [m/s] " << endl;
     cout << "Euler_px4 [Yaw] : " << euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
     cout << "Batt : " << voltage << " [V] " << percentage * 100 << "%" << endl;
-    cout << "UP_Dist : " << range << " [m] " << endl;
+    cout << "UP_Dist : " << range << " [m] " << "Camera: "<< camera_cnt << " [" << camera_flag << "]"<< endl;
 }

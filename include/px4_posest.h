@@ -30,6 +30,7 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/UInt16.h>
 #include <tf2_msgs/TFMessage.h>
+#include <serial/serial.h>
 
 using namespace std;
 using namespace Eigen;
@@ -52,6 +53,7 @@ class PX4_posest {
     ros::Publisher vision_pub;
 
     ros::Timer timer_vision_pub;
+    ros::Timer timer_take_photo;
 
     int sensor_type;
 
@@ -65,6 +67,8 @@ class PX4_posest {
     };
 
     double voltage, percentage, range;
+    bool camera_flag;
+    int camera_cnt;
 
     Eigen::Vector3d euler_fcu;
     Eigen::Vector3d euler_vio;
@@ -79,8 +83,11 @@ class PX4_posest {
     geometry_msgs::PoseStamped lio_pose;
     geometry_msgs::PoseStamped ekf_pose;
     geometry_msgs::PoseStamped vision_pose;
+
+    serial::Serial ser;
     
     void printf_info();
+    void camera_initial();
 
   private:
     float get_dt(ros::Time last);
@@ -94,6 +101,8 @@ class PX4_posest {
     void batt_cb(const sensor_msgs::BatteryState::ConstPtr &msg);
     void rng_cb(const sensor_msgs::Range::ConstPtr &msg);
     void timercb_pub_vision_pose(const ros::TimerEvent &e);
+    void timercb_take_photo(const ros::TimerEvent &e);
+
 
 };
 

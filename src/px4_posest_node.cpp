@@ -9,6 +9,8 @@ int main(int argc, char **argv)
 
     PX4_posest px4_posest(nh);
 
+    px4_posest.camera_initial();
+    
     // Main Loop
     while (ros::ok())
     {
