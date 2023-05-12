@@ -84,7 +84,8 @@ void PX4_posest::camera_initial()
     ser.flushInput();
     ser.flushOutput();
     camera_flag = false;
-    camera_cnt = 0;
+    camera_cnt = -1;
+    writeToFile("\nNEW Recording\n");
 }
 
 void PX4_posest::timercb_take_photo(const ros::TimerEvent &e)
@@ -105,9 +106,36 @@ void PX4_posest::timercb_take_photo(const ros::TimerEvent &e)
     {
         camera_flag = true;
         camera_cnt++;
+
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(2);
+
+        stream << "Cnt: " << camera_cnt
+               << " Pos_x: " << px4_pose[0]
+               << " Pos_y: " << px4_pose[1]
+               << " Pos_z: " << px4_pose[2];
+        
+        writeToFile(stream.str());
     }
     else 
         camera_flag = false;
+}
+
+void PX4_posest::writeToFile(const string& data)
+{    
+    string full_path = "/src/archsd_photo.txt";
+
+    // Open the file for writing
+    ofstream outfile(full_path.c_str(), std::ios::app);
+
+    if (outfile.is_open())
+    {
+        outfile << data << std::endl;
+        // Close the file
+        outfile.close();
+    } 
+    else
+        ROS_ERROR_STREAM("Unable to open file: " << full_path);
 }
 
 void PX4_posest::mocap_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)

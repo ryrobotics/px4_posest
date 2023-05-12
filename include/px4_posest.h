@@ -102,8 +102,7 @@ class PX4_posest {
     void rng_cb(const sensor_msgs::Range::ConstPtr &msg);
     void timercb_pub_vision_pose(const ros::TimerEvent &e);
     void timercb_take_photo(const ros::TimerEvent &e);
-
-
+    void writeToFile(const std::string& data);
 };
 
 #endif
