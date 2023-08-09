@@ -2,7 +2,11 @@
 	<!-- 0->Vicon 1->T265 2->Lidar 3->imu_ekf -->
 	<arg name="type" default="0"/>
 
-	<node pkg="px4_posest" type="px4_mix" name="px4_mix" output="screen">
+	<!-- <node pkg="px4_posest" type="px4_mix" name="px4_mix" output="screen">
+    	<param name="sensor_type" value="$(arg type)"/>
+	</node> -->
+
+	<node pkg="px4_posest" type="px4_posest_node" name="px4_posest_node" output="screen">
     	<param name="sensor_type" value="$(arg type)"/>
 	</node>
 

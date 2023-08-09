@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   mavros_msgs
   sensor_msgs
   std_msgs
+  serial
 )
 
 ## System dependencies are found with CMake's conventions
@@ -105,9 +106,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES px4_mocap
-#  CATKIN_DEPENDS Eigen geometry_msgs mavros_msgs sensor_msgs std_msgs
+  INCLUDE_DIRS include
+# CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -118,7 +118,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   "/usr/include/eigen3"
   ${catkin_INCLUDE_DIRS}
 )
@@ -136,23 +136,31 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(px4_mocap_node src/px4_mocap_node.cpp)
-target_link_libraries(px4_mocap_node  ${catkin_LIBRARIES})
+# add_executable(px4_mocap_node src/px4_mocap_node.cpp)
+# target_link_libraries(px4_mocap_node  ${catkin_LIBRARIES})
 
-add_executable(offb_node src/offb_node.cpp)
-target_link_libraries(offb_node  ${catkin_LIBRARIES})
+# add_executable(offb_node src/offb_node.cpp)
+# target_link_libraries(offb_node  ${catkin_LIBRARIES})
 
-add_executable(square_node src/square_node.cpp)
-target_link_libraries(square_node  ${catkin_LIBRARIES})
+# add_executable(square_node src/square_node.cpp)
+# target_link_libraries(square_node  ${catkin_LIBRARIES})
 
-add_executable(px4_t265 src/px4_t265.cpp)
-target_link_libraries(px4_t265  ${catkin_LIBRARIES})
+# add_executable(px4_t265 src/px4_t265.cpp)
+# target_link_libraries(px4_t265  ${catkin_LIBRARIES})
 
-add_executable(px4_os0 src/px4_os0.cpp)
-target_link_libraries(px4_os0  ${catkin_LIBRARIES})
+# add_executable(px4_os0 src/px4_os0.cpp)
+# target_link_libraries(px4_os0  ${catkin_LIBRARIES})
 
-add_executable(px4_mix src/px4_mix.cpp)
-target_link_libraries(px4_mix  ${catkin_LIBRARIES})
+# add_executable(px4_mix src/px4_mix.cpp)
+# target_link_libraries(px4_mix  ${catkin_LIBRARIES})
+add_library(px4_posest src/px4_posest.cpp)
+target_link_libraries(px4_posest ${catkin_LIBRARIES})
+
+add_executable(px4_posest_node src/px4_posest_node.cpp)
+target_link_libraries(px4_posest_node ${catkin_LIBRARIES})
+target_link_libraries(px4_posest_node px4_posest)
+
+
 #############
 ## Install ##
 #############
@@ -182,11 +190,10 @@ target_link_libraries(px4_mix  ${catkin_LIBRARIES})
 # )
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
