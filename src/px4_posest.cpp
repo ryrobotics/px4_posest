@@ -50,7 +50,7 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
         timer_vision_pub = nh.createTimer(ros::Duration(0.02), &PX4_posest::timercb_pub_vision_pose, this);
     }
 
-    timer_take_photo = nh.createTimer(ros::Duration(2), &PX4_posest::timercb_take_photo, this);
+    // timer_take_photo = nh.createTimer(ros::Duration(2), &PX4_posest::timercb_take_photo, this);
 }
 
 // CallBack Func

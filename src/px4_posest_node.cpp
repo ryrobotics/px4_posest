@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 
     PX4_posest px4_posest(nh);
 
-    px4_posest.camera_initial();
+    // px4_posest.camera_initial();
     
     ros::Time time_now = ros::Time::now();
     ros::Time time_lst = ros::Time::now();
