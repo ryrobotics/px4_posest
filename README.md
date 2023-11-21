@@ -16,6 +16,10 @@ sensor type:
     1 -> T265
     2 -> Lidar
     3 -> Lidar_Imu_EKF
+    4 -> VINS_Imu_EKF
 
+is_pub:
+    0 -> no publisher
+    1 -> publish odom to /mavros/vision_pose/pose
 
 ```

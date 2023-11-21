@@ -41,8 +41,7 @@ class PX4_posest {
     // ~PX4_posest();
 
     ros::Subscriber mocap_sub;
-    ros::Subscriber vio_sub;
-    ros::Subscriber lio_sub;
+    ros::Subscriber odom_sub;
     ros::Subscriber ekf_sub;
     ros::Subscriber position_sub;
     ros::Subscriber velocity_sub;
@@ -56,6 +55,8 @@ class PX4_posest {
     ros::Timer timer_take_photo;
 
     int sensor_type;
+    bool is_pub;
+    bool is_print;
 
     // 0->vicon, 1->vio, 2->lidar, 3->imu_lidar_ekf
     enum SENSOR_TYPE
@@ -63,7 +64,8 @@ class PX4_posest {
         MOCAP = 0,
         VIO = 1,
         LIO = 2,
-        EKF = 3
+        LIO_EKF = 3,
+        VINS_EKF = 4
     };
 
     double voltage, percentage, range;
@@ -71,18 +73,20 @@ class PX4_posest {
     int camera_cnt;
 
     Eigen::Vector3d euler_fcu;
-    Eigen::Vector3d euler_vio;
-    Eigen::Vector3d euler_lio;
+    Eigen::Vector3d euler_odom;
     Eigen::Vector3d euler_ekf;
     Eigen::Vector3d euler_mocap;
 
     Vector3d px4_pose;
     Vector3d px4_vel;
     geometry_msgs::PoseStamped mocap_pose;
-    geometry_msgs::PoseStamped t265_pose;
-    geometry_msgs::PoseStamped lio_pose;
+    geometry_msgs::PoseStamped odom_pose;
     geometry_msgs::PoseStamped ekf_pose;
     geometry_msgs::PoseStamped vision_pose;
+
+    nav_msgs::Odometry odom_rcv;
+    ros::Time odom_rcv_stamp;
+    ros::Time ekf_rcv_stamp;
 
     serial::Serial ser;
     
@@ -92,8 +96,7 @@ class PX4_posest {
   private:
     float get_dt(ros::Time last);
     void mocap_cb(const geometry_msgs::PoseStamped::ConstPtr &msg);
-    void vio_cb(const nav_msgs::Odometry::ConstPtr &msg);
-    void lio_cb(const nav_msgs::Odometry::ConstPtr &msg);
+    void odom_cb(const nav_msgs::Odometry::ConstPtr &msg);
     void ekf_cb(const nav_msgs::Odometry::ConstPtr &msg);
     void pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void vel_cb(const geometry_msgs::TwistStamped::ConstPtr &msg);
@@ -103,6 +106,31 @@ class PX4_posest {
     void timercb_pub_vision_pose(const ros::TimerEvent &e);
     void timercb_take_photo(const ros::TimerEvent &e);
     void writeToFile(const std::string& data);
+
+    inline bool odom_is_received(const ros::Time &now_time)
+    {
+      return (now_time - odom_rcv_stamp).toSec() < 0.5;
+    }
+
+    inline bool ekf_is_received(const ros::Time &now_time)
+    {
+      return (now_time - ekf_rcv_stamp).toSec() < 0.5;
+    }
+
+    inline bool odom_is_good(const nav_msgs::Odometry &msg)
+    {
+      Eigen::Vector3d v;
+      v(0) = msg.twist.twist.linear.x;
+      v(1) = msg.twist.twist.linear.y;
+      v(2) = msg.twist.twist.linear.z;
+
+      Eigen::Vector3d p;
+      p(0) = msg.pose.pose.position.x;
+      p(1) = msg.pose.pose.position.y;
+      p(2) = msg.pose.pose.position.z;
+
+      return v.norm() < 3.0 && p.norm() < 10.0;
+    }
 };
 
 #endif
