@@ -23,7 +23,8 @@ int main(int argc, char **argv)
 
         time_now = ros::Time::now();
 
-        if(px4_posest.is_print && (time_now - time_lst).toSec() > 0.2)
+        if((px4_posest.is_print && (time_now - time_lst).toSec() > 0.2)
+            || !px4_posest.is_pub)
         {
             px4_posest.printf_info();
             time_lst = time_now;
