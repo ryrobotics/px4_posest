@@ -322,9 +322,12 @@ void PX4_posest::printf_info()
 
 
     cout << ">>>FCU Info<<<" << endl;
-    cout << "Pos_px4: " << px4_pose[0] << " [m] " << px4_pose[1] << " [m] " << px4_pose[2] << " [m] " << endl;
-    // cout << "Vel_fcu: " << px4_vel[0] << " [m/s] " << px4_vel[1] << " [m/s] " << px4_vel[2] << " [m/s] " << endl;
-    cout << "Euler_px4 [Yaw] : " << euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
+    if (is_pub)
+    {
+        cout << "Pos_px4: " << px4_pose[0] << " [m] " << px4_pose[1] << " [m] " << px4_pose[2] << " [m] " << endl;
+        // cout << "Vel_fcu: " << px4_vel[0] << " [m/s] " << px4_vel[1] << " [m/s] " << px4_vel[2] << " [m/s] " << endl;
+        cout << "Euler_px4 [Yaw] : " << euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
+    }
     cout << "Batt : " << voltage << " [V] " << percentage * 100 << "%" << endl;
     cout << "is_pub: " << is_pub << endl;
     // cout << "Camera: " << camera_cnt << " [" << camera_flag << "]" << endl;

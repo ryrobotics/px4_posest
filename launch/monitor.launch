@@ -6,6 +6,7 @@
 	<node pkg="px4_posest" type="px4_posest_node" name="px4_posest_node" output="screen">
     	<param name="sensor_type" value="$(arg type)"/>
 	    <param name="is_pub" value="$(arg is_pub)"/>
+		<remap from="/vins_fusion/odometry" to = "/vins_estimator/odometry"/>
 	</node>
 
 </launch>
