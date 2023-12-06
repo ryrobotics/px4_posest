@@ -1,13 +1,12 @@
 <launch>
 	<!-- 0->Vicon 1->T265 2->Lidar 3->imu_ekf -->
 	<arg name="type" default="0"/>
-
-	<!-- <node pkg="px4_posest" type="px4_mix" name="px4_mix" output="screen">
-    	<param name="sensor_type" value="$(arg type)"/>
-	</node> -->
+	<arg name="is_pub" default="False"/>
 
 	<node pkg="px4_posest" type="px4_posest_node" name="px4_posest_node" output="screen">
     	<param name="sensor_type" value="$(arg type)"/>
+	    <param name="is_pub" value="$(arg is_pub)"/>
+		<remap from="/vins_fusion/odometry" to = "/vins_estimator/odometry"/>
 	</node>
 
 </launch>

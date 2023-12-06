@@ -3,28 +3,45 @@
 PX4_posest::PX4_posest(ros::NodeHandle &nh)
 {
     nh.param<int>("px4_posest_node/sensor_type", sensor_type, SENSOR_TYPE::MOCAP); // 0->vicon, 1->vio, 2->lio, 3->imu_lidar_ekf
-    
+    nh.param<bool>("px4_posest_node/is_pub", is_pub, false);
+
     if(sensor_type == SENSOR_TYPE::MOCAP)
     {
         // Subscribe mocap estimated position
-        mocap_sub = nh.subscribe<geometry_msgs::PoseStamped>("/vrpn_client_node/rywang/pose", 1, &PX4_posest::mocap_cb, this);
+        mocap_sub = nh.subscribe<geometry_msgs::PoseStamped>
+                    ("/vrpn_client_node/rywang/pose", 1, &PX4_posest::mocap_cb, this,
+                    ros::TransportHints().tcpNoDelay());
     }
     else if(sensor_type == SENSOR_TYPE::VIO)
     {
         // Subscribe t265 odom
-        vio_sub = nh.subscribe<nav_msgs::Odometry>("camera/odom/sample_throttled", 1, &PX4_posest::vio_cb, this);
+        odom_sub = nh.subscribe<nav_msgs::Odometry>
+                    ("camera/odom/sample_throttled", 1, &PX4_posest::odom_cb, this,
+                    ros::TransportHints().tcpNoDelay());
     }
     else if(sensor_type == SENSOR_TYPE::LIO)
     {
         // Subscribe os0 odom
-        lio_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 1, &PX4_posest::lio_cb, this);        
+        odom_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 1, &PX4_posest::odom_cb, this,
+                    ros::TransportHints().tcpNoDelay());        
     }
-    else if(sensor_type == SENSOR_TYPE::EKF)
+    else if(sensor_type == SENSOR_TYPE::LIO_EKF)
     {
         // Subscribe os0 odom
-        lio_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 1, &PX4_posest::lio_cb, this);        
+        odom_sub = nh.subscribe<nav_msgs::Odometry>("Odometry", 1, &PX4_posest::odom_cb, this,
+                    ros::TransportHints().tcpNoDelay());        
         // Subscribe imu_ekf odom
-        ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 1, &PX4_posest::ekf_cb, this);        
+        ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 1, &PX4_posest::ekf_cb, this,
+                    ros::TransportHints().tcpNoDelay());        
+    }
+    else if(sensor_type == SENSOR_TYPE::VINS_EKF)
+    {
+        // Subscribe os0 odom
+        odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, &PX4_posest::odom_cb, this,
+                    ros::TransportHints().tcpNoDelay());        
+        // Subscribe imu_ekf odom
+        ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 1, &PX4_posest::ekf_cb, this,
+                    ros::TransportHints().tcpNoDelay());        
     }
 
     // Subscribe Drone's Position for Reference [Frame: ENU]
@@ -43,14 +60,18 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
     // Publish Drone's pose [Frame: ENU]
     // Send to FCU using mavros_extras/src/plugins/vision_pose_estimate.cpp, Mavlink Msg is VISION_POSITION_ESTIMATE
     // uORB msg in FCU is vehicle_vision_position.msg and vehicle_vision_attitude.msg
-    vision_pub = nh.advertise<geometry_msgs::PoseStamped>("mavros/vision_pose/pose", 1);
+    vision_pub = nh.advertise<geometry_msgs::PoseStamped>("mavros/vision_pose/pose", 10);
 
-    if (sensor_type != SENSOR_TYPE::VIO) // if using t265, no need publish pose
+    if (is_pub && sensor_type != SENSOR_TYPE::VIO) // if using t265, no need publish pose
     {
         timer_vision_pub = nh.createTimer(ros::Duration(0.02), &PX4_posest::timercb_pub_vision_pose, this);
     }
 
     // timer_take_photo = nh.createTimer(ros::Duration(2), &PX4_posest::timercb_take_photo, this);
+
+    odom_rcv_stamp = ros::Time(0);
+    ekf_rcv_stamp = ros::Time(0);
+    is_print = false;
 }
 
 // CallBack Func
@@ -63,15 +84,37 @@ void PX4_posest::timercb_pub_vision_pose(const ros::TimerEvent &e)
     }
     else if(sensor_type == SENSOR_TYPE::LIO)
     {
-        vision_pose = lio_pose;
+        vision_pose = odom_pose;
     }
-    else if(sensor_type == SENSOR_TYPE::EKF)
+    else if(sensor_type == SENSOR_TYPE::LIO_EKF ||
+            sensor_type == SENSOR_TYPE::VINS_EKF)
     {
         vision_pose = ekf_pose;
     }
 
-    vision_pose.header.stamp = ros::Time::now();
-    vision_pub.publish(vision_pose);
+    if(!odom_is_received(ros::Time::now()))
+    {
+        is_print = false;
+        cout << "NO odom! Stop publishing!" << endl;
+    }
+    else if(!odom_is_good(odom_rcv))
+    {
+        is_print = false;
+        cout << "WRONG odom! Stop publishing!" << endl;
+    }
+    else if(!ekf_is_received(ros::Time::now()) && 
+            (sensor_type == SENSOR_TYPE::LIO_EKF ||
+            sensor_type == SENSOR_TYPE::VINS_EKF))
+    {
+        is_print = false;
+        cout << "NO EKF! Stop publishing!" << endl;
+    }
+    else
+    {
+        is_print = true;
+        vision_pose.header.stamp = ros::Time::now();
+        vision_pub.publish(vision_pose);
+    }
 }
 
 void PX4_posest::camera_initial()
@@ -144,25 +187,20 @@ void PX4_posest::mocap_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
     Eigen::Quaterniond q(msg->pose.orientation.w, msg->pose.orientation.x,
                          msg->pose.orientation.y, msg->pose.orientation.z);
     euler_mocap = mavros::ftf::quaternion_to_rpy(q);
+
+    odom_rcv_stamp = ros::Time::now();
 }
 
-void PX4_posest::vio_cb(const nav_msgs::Odometry::ConstPtr &msg)
+void PX4_posest::odom_cb(const nav_msgs::Odometry::ConstPtr &msg)
 {
-    t265_pose.header = msg->header;
-    t265_pose.pose = msg->pose.pose;
+    odom_rcv = *msg;
+    odom_pose.header = msg->header;
+    odom_pose.pose = msg->pose.pose;
     Eigen::Quaterniond q(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
                         msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
-    euler_vio = mavros::ftf::quaternion_to_rpy(q);
-}
+    euler_odom = mavros::ftf::quaternion_to_rpy(q);
 
-void PX4_posest::lio_cb(const nav_msgs::Odometry::ConstPtr &msg)
-{
-    lio_pose.header = msg->header;
-    lio_pose.pose = msg->pose.pose;
-    
-    Eigen::Quaterniond q(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
-                        msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
-    euler_lio = mavros::ftf::quaternion_to_rpy(q);
+    odom_rcv_stamp = ros::Time::now();
 }
 
 void PX4_posest::ekf_cb(const nav_msgs::Odometry::ConstPtr &msg)
@@ -172,6 +210,8 @@ void PX4_posest::ekf_cb(const nav_msgs::Odometry::ConstPtr &msg)
     Eigen::Quaterniond q(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
                         msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
     euler_ekf = mavros::ftf::quaternion_to_rpy(q);
+
+    ekf_rcv_stamp = ros::Time::now();
 }
 
 void PX4_posest::pos_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -247,22 +287,33 @@ void PX4_posest::printf_info()
     {
         cout << ">>>Data from T265<<<" << endl;
         cout << ">>>T265 Info<<<" << endl;
-        cout << "Pos_t265: " << t265_pose.pose.position.x << " [m] " << t265_pose.pose.position.y << " [m] " << t265_pose.pose.position.z << " [m] " << endl;
-        cout << "Euler_t265 [Yaw] : " << euler_vio[2] * 180 / M_PI << " [deg]  " << endl;        
+        cout << "Pos_t265: " << odom_pose.pose.position.x << " [m] " << odom_pose.pose.position.y << " [m] " << odom_pose.pose.position.z << " [m] " << endl;
+        cout << "Euler_t265 [Yaw] : " << euler_odom[2] * 180 / M_PI << " [deg]  " << endl;        
     }
     else if (sensor_type == SENSOR_TYPE::LIO)
     {
         cout << ">>>Data from Lidar<<<" << endl;
         cout << ">>>FAST_LIO Info<<<" << endl;
-        cout << "Pos_LIO: " << lio_pose.pose.position.x << " [m] " << lio_pose.pose.position.y << " [m] " << lio_pose.pose.position.z << " [m] " << endl;
-        cout << "Euler_LIO [Yaw] : " << euler_lio[2] * 180 / M_PI << " [deg]  " << endl;
+        cout << "Pos_LIO: " << odom_pose.pose.position.x << " [m] " << odom_pose.pose.position.y << " [m] " << odom_pose.pose.position.z << " [m] " << endl;
+        cout << "euler_odom [Yaw] : " << euler_odom[2] * 180 / M_PI << " [deg]  " << endl;
     }
-    else if (sensor_type == SENSOR_TYPE::EKF)
+    else if (sensor_type == SENSOR_TYPE::LIO_EKF)
     {
         cout << ">>>Data from IMU_EKF<<<" << endl;
         cout << ">>>FAST_LIO Info<<<" << endl;
-        cout << "Pos_LIO: " << lio_pose.pose.position.x << " [m] " << lio_pose.pose.position.y << " [m] " << lio_pose.pose.position.z << " [m] " << endl;
-        cout << "Euler_LIO [Yaw] : " << euler_lio[2] * 180 / M_PI << " [deg]  " << endl;
+        cout << "Pos_LIO: " << odom_pose.pose.position.x << " [m] " << odom_pose.pose.position.y << " [m] " << odom_pose.pose.position.z << " [m] " << endl;
+        cout << "Euler_LIO [Yaw] : " << euler_odom[2] * 180 / M_PI << " [deg]  " << endl;
+
+        cout << ">>>IMU_EKF Info<<<" << endl;
+        cout << "Pos_ekf: " << ekf_pose.pose.position.x << " [m] " << ekf_pose.pose.position.y << " [m] " << ekf_pose.pose.position.z << " [m] " << endl;
+        cout << "Euler_ekf [Yaw] : " << euler_ekf[2] * 180 / M_PI << " [deg]  " << endl;
+    }
+    else if (sensor_type == SENSOR_TYPE::VINS_EKF)
+    {
+        cout << ">>>Data from IMU_EKF<<<" << endl;
+        cout << ">>>VINS Info<<<" << endl;
+        cout << "Pos_VINS: " << odom_pose.pose.position.x << " [m] " << odom_pose.pose.position.y << " [m] " << odom_pose.pose.position.z << " [m] " << endl;
+        cout << "Euler_VINS [Yaw] : " << euler_odom[2] * 180 / M_PI << " [deg]  " << endl;
 
         cout << ">>>IMU_EKF Info<<<" << endl;
         cout << "Pos_ekf: " << ekf_pose.pose.position.x << " [m] " << ekf_pose.pose.position.y << " [m] " << ekf_pose.pose.position.z << " [m] " << endl;
@@ -271,10 +322,14 @@ void PX4_posest::printf_info()
 
 
     cout << ">>>FCU Info<<<" << endl;
-    cout << "Pos_px4: " << px4_pose[0] << " [m] " << px4_pose[1] << " [m] " << px4_pose[2] << " [m] " << endl;
-    // cout << "Vel_fcu: " << px4_vel[0] << " [m/s] " << px4_vel[1] << " [m/s] " << px4_vel[2] << " [m/s] " << endl;
-    cout << "Euler_px4 [Yaw] : " << euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
+    if (is_pub)
+    {
+        cout << "Pos_px4: " << px4_pose[0] << " [m] " << px4_pose[1] << " [m] " << px4_pose[2] << " [m] " << endl;
+        // cout << "Vel_fcu: " << px4_vel[0] << " [m/s] " << px4_vel[1] << " [m/s] " << px4_vel[2] << " [m/s] " << endl;
+        cout << "Euler_px4 [Yaw] : " << euler_fcu[2] * 180 / M_PI << " [deg] " << endl;
+    }
     cout << "Batt : " << voltage << " [V] " << percentage * 100 << "%" << endl;
-    cout << "Camera: " << camera_cnt << " [" << camera_flag << "]" << endl;
+    cout << "is_pub: " << is_pub << endl;
+    // cout << "Camera: " << camera_cnt << " [" << camera_flag << "]" << endl;
     // cout << "UP_Dist : " << range << " [m] " << "Camera: "<< camera_cnt << " [" << camera_flag << "]"<< endl;
 }
