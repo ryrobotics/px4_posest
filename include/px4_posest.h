@@ -58,14 +58,14 @@ class PX4_posest {
     bool is_pub;
     bool is_print;
 
-    // 0->vicon, 1->vio, 2->lidar, 3->imu_lidar_ekf
     enum SENSOR_TYPE
     {
         MOCAP = 0,
         VIO = 1,
         LIO = 2,
         LIO_EKF = 3,
-        VINS_EKF = 4
+        VINS_EKF = 4,
+        MOCAP_EKF = 5
     };
 
     double voltage, percentage, range;

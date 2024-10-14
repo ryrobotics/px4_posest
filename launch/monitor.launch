@@ -1,5 +1,5 @@
 <launch>
-	<!-- 0->Vicon 1->T265 2->Lidar 3->imu_ekf -->
+    <!-- 0->vicon, 1->vio, 2->lidar, 3->imu_lidar_ekf, 4->imu_vio_ekf, 5->imu_mocap_ekf -->
 	<arg name="type" default="0"/>
 	<arg name="is_pub" default="False"/>
 

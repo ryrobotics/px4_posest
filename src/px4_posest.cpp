@@ -2,7 +2,8 @@
 
 PX4_posest::PX4_posest(ros::NodeHandle &nh)
 {
-    nh.param<int>("px4_posest_node/sensor_type", sensor_type, SENSOR_TYPE::MOCAP); // 0->vicon, 1->vio, 2->lio, 3->imu_lidar_ekf
+    // 0->vicon, 1->vio, 2->lidar, 3->imu_lidar_ekf, 4->imu_vio_ekf, 5->imu_mocap_ekf
+    nh.param<int>("px4_posest_node/sensor_type", sensor_type, SENSOR_TYPE::MOCAP);
     nh.param<bool>("px4_posest_node/is_pub", is_pub, false);
 
     if(sensor_type == SENSOR_TYPE::MOCAP)
@@ -43,6 +44,16 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
         ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 1, &PX4_posest::ekf_cb, this,
                     ros::TransportHints().tcpNoDelay());        
     }
+    else if(sensor_type == SENSOR_TYPE::MOCAP_EKF)
+    {
+        // Subscribe mocap estimated position
+        mocap_sub = nh.subscribe<geometry_msgs::PoseStamped>
+                    ("/vrpn_client_node/rywang/pose", 1, &PX4_posest::mocap_cb, this,
+                    ros::TransportHints().tcpNoDelay());
+        // Subscribe imu_ekf odom
+        ekf_sub = nh.subscribe<nav_msgs::Odometry>("imu_ekf/odom", 1, &PX4_posest::ekf_cb, this,
+                    ros::TransportHints().tcpNoDelay());    
+    }
 
     // Subscribe Drone's Position for Reference [Frame: ENU]
     position_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 1, &PX4_posest::pos_cb, this);
@@ -78,7 +89,8 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
 
 void PX4_posest::timercb_pub_vision_pose(const ros::TimerEvent &e)
 {
-    if (sensor_type == SENSOR_TYPE::MOCAP)
+    if (sensor_type == SENSOR_TYPE::MOCAP ||
+        sensor_type == SENSOR_TYPE::MOCAP_EKF)
     {
         vision_pose = mocap_pose;
     }
@@ -319,7 +331,17 @@ void PX4_posest::printf_info()
         cout << "Pos_ekf: " << ekf_pose.pose.position.x << " [m] " << ekf_pose.pose.position.y << " [m] " << ekf_pose.pose.position.z << " [m] " << endl;
         cout << "Euler_ekf [Yaw] : " << euler_ekf[2] * 180 / M_PI << " [deg]  " << endl;
     }
+    else if (sensor_type == SENSOR_TYPE::MOCAP_EKF)
+    {
+        cout << ">>>Data from Vicon<<<" << endl;
+        cout << ">>>Mocap Info<<<" << endl;
+        cout << "Pos_mocap: " << mocap_pose.pose.position.x << " [m] " << mocap_pose.pose.position.y << " [m] " << mocap_pose.pose.position.z << " [m] " << endl;
+        cout << "Euler_mocap [Yaw] : " << euler_mocap[2] * 180 / M_PI << " [deg]  " << endl;
 
+        cout << ">>>IMU_EKF Info<<<" << endl;
+        cout << "Pos_ekf: " << ekf_pose.pose.position.x << " [m] " << ekf_pose.pose.position.y << " [m] " << ekf_pose.pose.position.z << " [m] " << endl;
+        cout << "Euler_ekf [Yaw] : " << euler_ekf[2] * 180 / M_PI << " [deg]  " << endl;
+    }
 
     cout << ">>>FCU Info<<<" << endl;
     if (is_pub)
