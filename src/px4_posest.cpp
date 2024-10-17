@@ -116,7 +116,8 @@ void PX4_posest::timercb_pub_vision_pose(const ros::TimerEvent &e)
     }
     else if(!ekf_is_received(ros::Time::now()) && 
             (sensor_type == SENSOR_TYPE::LIO_EKF ||
-            sensor_type == SENSOR_TYPE::VINS_EKF))
+            sensor_type == SENSOR_TYPE::VINS_EKF ||
+            sensor_type == SENSOR_TYPE::MOCAP_EKF))
     {
         is_print = false;
         cout << "NO EKF! Stop publishing!" << endl;
