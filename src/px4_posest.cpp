@@ -78,8 +78,6 @@ PX4_posest::PX4_posest(ros::NodeHandle &nh)
         timer_vision_pub = nh.createTimer(ros::Duration(0.02), &PX4_posest::timercb_pub_vision_pose, this);
     }
 
-    // timer_take_photo = nh.createTimer(ros::Duration(2), &PX4_posest::timercb_take_photo, this);
-
     odom_rcv_stamp = ros::Time(0);
     ekf_rcv_stamp = ros::Time(0);
     is_print = false;
@@ -128,70 +126,6 @@ void PX4_posest::timercb_pub_vision_pose(const ros::TimerEvent &e)
         vision_pose.header.stamp = ros::Time::now();
         vision_pub.publish(vision_pose);
     }
-}
-
-void PX4_posest::camera_initial()
-{
-    ser.setPort("/dev/ttyTHS0");
-    ser.setBaudrate(115200);
-    serial::Timeout to = serial::Timeout::simpleTimeout(200);
-    ser.setTimeout(to);
-    ser.open();
-    ser.flushInput();
-    ser.flushOutput();
-    camera_flag = false;
-    camera_cnt = -1;
-    writeToFile("\nNEW Recording\n");
-}
-
-void PX4_posest::timercb_take_photo(const ros::TimerEvent &e)
-{
-    // Send the command bytes
-    std::vector<uint8_t> command_bytes = {0xaa, 0x05, 0x01, 0x04, 0x0a};
-    ser.write(command_bytes);
-
-    // Wait for and read the response bytes
-    std::vector<uint8_t> response_bytes;
-    response_bytes.resize(6);
-    ser.read(response_bytes.data(), 6);
-
-    // Check if the response bytes match the expected bytes
-    std::vector<uint8_t> expected_response_bytes = {0x55, 0x06, 0x01, 0x00, 0x04, 0xe2};
-
-    if (response_bytes == expected_response_bytes)
-    {
-        camera_flag = true;
-        camera_cnt++;
-
-        std::ostringstream stream;
-        stream << std::fixed << std::setprecision(2);
-
-        stream << "Cnt: " << camera_cnt
-               << " Pos_x: " << px4_pose[0]
-               << " Pos_y: " << px4_pose[1]
-               << " Pos_z: " << px4_pose[2];
-        
-        writeToFile(stream.str());
-    }
-    else 
-        camera_flag = false;
-}
-
-void PX4_posest::writeToFile(const string& data)
-{    
-    string full_path = "/src/archsd_photo.txt";
-
-    // Open the file for writing
-    ofstream outfile(full_path.c_str(), std::ios::app);
-
-    if (outfile.is_open())
-    {
-        outfile << data << std::endl;
-        // Close the file
-        outfile.close();
-    } 
-    else
-        ROS_ERROR_STREAM("Unable to open file: " << full_path);
 }
 
 void PX4_posest::mocap_cb(const geometry_msgs::PoseStamped::ConstPtr &msg)

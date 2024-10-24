@@ -30,7 +30,6 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/UInt16.h>
 #include <tf2_msgs/TFMessage.h>
-#include <serial/serial.h>
 
 using namespace std;
 using namespace Eigen;
@@ -52,7 +51,6 @@ class PX4_posest {
     ros::Publisher vision_pub;
 
     ros::Timer timer_vision_pub;
-    ros::Timer timer_take_photo;
 
     int sensor_type;
     bool is_pub;
@@ -69,8 +67,6 @@ class PX4_posest {
     };
 
     double voltage, percentage, range;
-    bool camera_flag;
-    int camera_cnt;
 
     Eigen::Vector3d euler_fcu;
     Eigen::Vector3d euler_odom;
@@ -87,11 +83,8 @@ class PX4_posest {
     nav_msgs::Odometry odom_rcv;
     ros::Time odom_rcv_stamp;
     ros::Time ekf_rcv_stamp;
-
-    serial::Serial ser;
     
     void printf_info();
-    void camera_initial();
 
   private:
     float get_dt(ros::Time last);
@@ -104,8 +97,6 @@ class PX4_posest {
     void batt_cb(const sensor_msgs::BatteryState::ConstPtr &msg);
     void rng_cb(const sensor_msgs::Range::ConstPtr &msg);
     void timercb_pub_vision_pose(const ros::TimerEvent &e);
-    void timercb_take_photo(const ros::TimerEvent &e);
-    void writeToFile(const std::string& data);
 
     inline bool odom_is_received(const ros::Time &now_time)
     {
